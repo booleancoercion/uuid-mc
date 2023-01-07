@@ -198,6 +198,7 @@ impl PlayerUuid {
     /// use uuid::Uuid;
     /// use uuid_mc::PlayerUuid;
     ///
+    /// # #[cfg(all(feature = "online", feature = "offline"))]
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let uuid_offline = Uuid::try_parse("db62bdfb-eddc-3acc-a14e-c703aba52549")?;
     /// let uuid_online = Uuid::try_parse("61699b2e-d327-4a01-9f1e-0ea8c3f06bc6")?;
@@ -208,6 +209,7 @@ impl PlayerUuid {
     /// assert!(matches!(player_uuid_online, PlayerUuid::Online(_)));
     /// # Ok(())
     /// # }
+    /// # #[cfg(not(all(feature = "online", feature = "offline")))] fn main() {}
     pub fn new_with_uuid(uuid: Uuid) -> Result<Self> {
         match uuid.get_version() {
             #[cfg(feature = "online")]
