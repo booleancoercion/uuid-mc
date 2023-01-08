@@ -4,9 +4,6 @@
 //!
 //! To start, head over to [`PlayerUuid`] or look at some of the examples in this crate.
 
-#[cfg(not(any(feature = "online", feature = "offline")))]
-compile_error!("please select at least one feature (uuid-mc)");
-
 use thiserror::Error;
 use uuid::Version;
 pub use uuid::{self, Uuid};
@@ -35,21 +32,17 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 /// A struct that represents a UUID with an online format (UUID v4).
-#[cfg(feature = "online")]
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct OnlineUuid(Uuid);
 
 /// A struct that represents a UUID with an offline format (UUID v3).
-#[cfg(feature = "offline")]
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct OfflineUuid(Uuid);
 
 /// An enum that can represent both kinds of UUIDs.
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum PlayerUuid {
-    #[cfg(feature = "online")]
     Online(OnlineUuid),
-    #[cfg(feature = "offline")]
     Offline(OfflineUuid),
 }
 
@@ -60,7 +53,6 @@ struct OnlineUuidResponse {
     id: Uuid,
 }
 
-#[cfg(feature = "online")]
 impl OnlineUuid {
     /// Uses the Mojang API to fetch the username belonging to this UUID.
     ///
@@ -83,6 +75,7 @@ impl OnlineUuid {
     /// # Ok(())
     /// # }
     /// ```
+    #[cfg(feature = "online")]
     pub fn get_username(&self) -> Result<String> {
         let response = ureq::get(&format!(
             "https://sessionserver.mojang.com/session/minecraft/profile/{}",
@@ -111,7 +104,6 @@ impl OnlineUuid {
     }
 }
 
-#[cfg(feature = "offline")]
 impl OfflineUuid {
     /// Returns the inner [Uuid].
     pub fn as_uuid(&self) -> &Uuid {
@@ -198,7 +190,6 @@ impl PlayerUuid {
     /// use uuid::Uuid;
     /// use uuid_mc::PlayerUuid;
     ///
-    /// # #[cfg(all(feature = "online", feature = "offline"))]
     /// # fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     /// let uuid_offline = Uuid::try_parse("db62bdfb-eddc-3acc-a14e-c703aba52549")?;
     /// let uuid_online = Uuid::try_parse("61699b2e-d327-4a01-9f1e-0ea8c3f06bc6")?;
@@ -209,12 +200,9 @@ impl PlayerUuid {
     /// assert!(matches!(player_uuid_online, PlayerUuid::Online(_)));
     /// # Ok(())
     /// # }
-    /// # #[cfg(not(all(feature = "online", feature = "offline")))] fn main() {}
     pub fn new_with_uuid(uuid: Uuid) -> Result<Self> {
         match uuid.get_version() {
-            #[cfg(feature = "online")]
             Some(Version::Random) => Ok(Self::Online(OnlineUuid(uuid))),
-            #[cfg(feature = "offline")]
             Some(Version::Md5) => Ok(Self::Offline(OfflineUuid(uuid))),
             _ => Err(Error::InvalidUuid),
         }
@@ -223,9 +211,7 @@ impl PlayerUuid {
     /// Returns the inner [`Uuid`].
     pub fn as_uuid(&self) -> &Uuid {
         match self {
-            #[cfg(feature = "online")]
             Self::Online(uuid) => uuid.as_uuid(),
-            #[cfg(feature = "offline")]
             Self::Offline(uuid) => uuid.as_uuid(),
         }
     }
@@ -239,10 +225,8 @@ impl PlayerUuid {
     ///
     /// # Panics
     /// If the inner UUID is not an offline one.
-    #[cfg(feature = "offline")]
     pub fn unwrap_offline(self) -> OfflineUuid {
         match self {
-            #[cfg(feature = "online")]
             Self::Online(_) => panic!("unwrap_offline called on an online uuid"),
             Self::Offline(uuid) => uuid,
         }
@@ -252,11 +236,9 @@ impl PlayerUuid {
     ///
     /// # Panics
     /// If the inner UUID is not an online one.
-    #[cfg(feature = "online")]
     pub fn unwrap_online(self) -> OnlineUuid {
         match self {
             Self::Online(uuid) => uuid,
-            #[cfg(feature = "offline")]
             Self::Offline(_) => panic!("unwrap_online called on an offline uuid"),
         }
     }
