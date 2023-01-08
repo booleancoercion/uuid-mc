@@ -1,6 +1,6 @@
 [package]
 name = "uuid-mc"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A library for handling and generating Minecraft offline and online UUIDs"
@@ -11,12 +11,12 @@ categories = ["authentication", "encoding"]
 
 [dependencies]
 thiserror = "1.0.38"
-uuid = "1.2.2"
+uuid = { version = "1.2.2", features = ["serde"] }
+serde = { version = "1.0.152", features = ["derive"] }
 md5 = { version = "0.7.0", optional = true }
 ureq = { version = "2.6.1", features = ["json"], optional = true }
-serde = { version = "1.0.152", features = ["derive"], optional = true }
 
 [features]
 default = ["offline", "online"]
 offline = ["md5"]
-online = ["ureq", "serde", "uuid/serde"]
+online = ["ureq"]

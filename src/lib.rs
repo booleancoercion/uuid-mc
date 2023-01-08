@@ -4,6 +4,7 @@
 //!
 //! To start, head over to [`PlayerUuid`] or look at some of the examples in this crate.
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Version;
 pub use uuid::{self, Uuid};
@@ -24,33 +25,39 @@ pub enum Error {
     #[error("ureq transport error: {0}")]
     Transport(ureq::Transport),
 
-    /// An unknown error used as a catch-all.
-    #[error("unknown")]
-    Unknown,
+    /// An error that signifies that the Mojang API returned an unexpected result.
+    #[error("mojang api returned unexpected result")]
+    MojangAPIError,
 }
 
 type Result<T> = std::result::Result<T, Error>;
 
 /// A struct that represents a UUID with an online format (UUID v4).
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[serde(try_from = "Uuid")]
+#[serde(into = "Uuid")]
 pub struct OnlineUuid(Uuid);
 
 /// A struct that represents a UUID with an offline format (UUID v3).
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[serde(try_from = "Uuid")]
+#[serde(into = "Uuid")]
 pub struct OfflineUuid(Uuid);
 
 /// An enum that can represent both kinds of UUIDs.
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[serde(try_from = "Uuid")]
+#[serde(into = "Uuid")]
 pub enum PlayerUuid {
     Online(OnlineUuid),
     Offline(OfflineUuid),
 }
 
 #[cfg(feature = "online")]
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 struct OnlineUuidResponse {
     name: String,
-    id: Uuid,
+    id: PlayerUuid,
 }
 
 impl OnlineUuid {
@@ -85,7 +92,8 @@ impl OnlineUuid {
 
         match response {
             Ok(data) => {
-                let response: OnlineUuidResponse = data.into_json().map_err(|_| Error::Unknown)?;
+                let response: OnlineUuidResponse =
+                    data.into_json().map_err(|_| Error::MojangAPIError)?;
                 Ok(response.name)
             }
             Err(ureq::Error::Status(_, _)) => Err(Error::InvalidUsername),
@@ -146,8 +154,9 @@ impl PlayerUuid {
 
         match response {
             Ok(data) => {
-                let response: OnlineUuidResponse = data.into_json().map_err(|_| Error::Unknown)?;
-                Ok(Self::Online(OnlineUuid(response.id)))
+                let response: OnlineUuidResponse =
+                    data.into_json().map_err(|_| Error::MojangAPIError)?;
+                Ok(response.id)
             }
             Err(ureq::Error::Status(_, _)) => Err(Error::InvalidUsername),
             Err(ureq::Error::Transport(x)) => Err(Error::Transport(x)),
@@ -241,6 +250,68 @@ impl PlayerUuid {
             Self::Online(uuid) => uuid,
             Self::Offline(_) => panic!("unwrap_online called on an offline uuid"),
         }
+    }
+
+    /// Returns the contained [`OfflineUuid`] if it is present, or [`None`] otherwise.
+    pub fn offline(self) -> Option<OfflineUuid> {
+        match self {
+            Self::Online(_) => None,
+            Self::Offline(uuid) => Some(uuid),
+        }
+    }
+
+    /// Returns the contained [`OnlineUuid`] if it is present, or [`None`] otherwise.
+    pub fn online(self) -> Option<OnlineUuid> {
+        match self {
+            Self::Online(uuid) => Some(uuid),
+            Self::Offline(_) => None,
+        }
+    }
+}
+
+impl TryFrom<Uuid> for PlayerUuid {
+    type Error = Error;
+
+    fn try_from(value: Uuid) -> std::result::Result<Self, Self::Error> {
+        Self::new_with_uuid(value)
+    }
+}
+
+impl TryFrom<Uuid> for OnlineUuid {
+    type Error = Error;
+
+    fn try_from(value: Uuid) -> std::result::Result<Self, Self::Error> {
+        PlayerUuid::new_with_uuid(value)?
+            .online()
+            .ok_or(Error::InvalidUuid)
+    }
+}
+
+impl TryFrom<Uuid> for OfflineUuid {
+    type Error = Error;
+
+    fn try_from(value: Uuid) -> std::result::Result<Self, Self::Error> {
+        PlayerUuid::new_with_uuid(value)?
+            .offline()
+            .ok_or(Error::InvalidUuid)
+    }
+}
+
+impl From<PlayerUuid> for Uuid {
+    fn from(other: PlayerUuid) -> Self {
+        *other.as_uuid()
+    }
+}
+
+impl From<OnlineUuid> for Uuid {
+    fn from(other: OnlineUuid) -> Self {
+        *other.as_uuid()
+    }
+}
+
+impl From<OfflineUuid> for Uuid {
+    fn from(other: OfflineUuid) -> Self {
+        *other.as_uuid()
     }
 }
 
