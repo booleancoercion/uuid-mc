@@ -5,7 +5,7 @@ and also crucially includes conversion from usernames to offline UUIDs (which wa
 ## Usage
 Simply include the latest version of `uuid-mc` in your project. There are examples in the documentation.
 
-## Licens
+## License
 Licensed under either of:
 
  * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or https://www.apache.org/licenses/LICENSE-2.0)
