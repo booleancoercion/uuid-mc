@@ -267,6 +267,16 @@ impl PlayerUuid {
             Self::Offline(_) => None,
         }
     }
+
+    /// Returns whether the contained UUID is an offline one or not.
+    pub fn is_offline(&self) -> bool {
+        matches!(self, Self::Offline(_))
+    }
+
+    /// Returns whether the contained UUID is an online one or not.
+    pub fn is_online(&self) -> bool {
+        matches!(self, Self::Online(_))
+    }
 }
 
 impl TryFrom<Uuid> for PlayerUuid {
